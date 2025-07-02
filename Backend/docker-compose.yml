@@ -1,0 +1,29 @@
+services:
+  # ---------------- Database ----------------
+  mysql-micro:
+    image: mysql:latest
+    container_name: mysql-micro
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-micro-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+  
+  app-service:
+    build: ./User
+    container_name: app-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql-micro
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-micro:3306/app_db
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+
+volumes:
+  mysql-micro-data:

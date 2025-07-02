@@ -1,0 +1,11 @@
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\configs\ApplicationConfig.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\configs\SecurityConfig.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\controllers\UserController.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\dtos\LoginDto.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\entities\Roles.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\entities\User.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\repositories\UserRepository.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\services\EmailService.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\services\JwtService.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\services\UserService.java
+C:\Users\dta-150\Desktop\knowledgebase-platform\Backend\User\src\main\java\com\Knowledgebase\User\UserApplication.java

@@ -1,0 +1,11 @@
+com\Knowledgebase\User\services\JwtService.class
+com\Knowledgebase\User\services\UserService.class
+com\Knowledgebase\User\repositories\UserRepository.class
+com\Knowledgebase\User\controllers\UserController.class
+com\Knowledgebase\User\services\EmailService.class
+com\Knowledgebase\User\configs\SecurityConfig.class
+com\Knowledgebase\User\dtos\LoginDto.class
+com\Knowledgebase\User\configs\ApplicationConfig.class
+com\Knowledgebase\User\entities\Roles.class
+com\Knowledgebase\User\UserApplication.class
+com\Knowledgebase\User\entities\User.class
