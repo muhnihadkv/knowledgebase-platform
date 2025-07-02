@@ -66,5 +66,11 @@ public class DocumentController {
         docService.restoreVersion(versionId, authHeader);
     }
 
+    @GetMapping("/public/{id}")
+    public DocumentDTO getPublicDocument(@PathVariable Long id) {
+        return docService.getPublicDocument(id);
+    }
+
+
 }
 

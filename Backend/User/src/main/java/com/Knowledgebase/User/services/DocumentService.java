@@ -42,7 +42,7 @@ public class DocumentService {
         Document doc = new Document();
         doc.setTitle(req.getTitle());
         doc.setContent(req.getContent());
-        doc.setVisibility(req.isPublic() ? Visibility.PUBLIC : Visibility.PRIVATE);
+        doc.setVisibility(req.isPublicDocument() ? Visibility.PUBLIC : Visibility.PRIVATE);
         doc.setAuthor(currentUser);
         docRepo.save(doc);
 
@@ -242,7 +242,15 @@ public class DocumentService {
         }
     }
 
+    public DocumentDTO getPublicDocument(Long documentId) {
+        Document document = docRepo.findById(documentId)
+                .orElseThrow(() -> new NoSuchElementException("Document not found"));
 
+        if (document.getVisibility() != Visibility.PUBLIC) {
+            throw new RuntimeException("This document is private");
+        }
 
+        return DocumentDTO.of(document);
+    }
 
 }

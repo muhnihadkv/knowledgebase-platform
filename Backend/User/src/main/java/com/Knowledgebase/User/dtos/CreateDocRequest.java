@@ -3,7 +3,7 @@ package com.Knowledgebase.User.dtos;
 public class CreateDocRequest {
     private String title;
     private String content;
-    private boolean isPublic;
+    private boolean publicDocument; // renamed
 
     public String getTitle() {
         return title;
@@ -21,11 +21,11 @@ public class CreateDocRequest {
         this.content = content;
     }
 
-    public boolean isPublic() {
-        return isPublic;
+    public boolean isPublicDocument() {
+        return publicDocument;
     }
 
-    public void setPublic(boolean aPublic) {
-        isPublic = aPublic;
+    public void setPublicDocument(boolean publicDocument) {
+        this.publicDocument = publicDocument;
     }
 }
