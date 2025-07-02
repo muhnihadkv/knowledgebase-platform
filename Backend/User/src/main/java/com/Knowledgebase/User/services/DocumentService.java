@@ -5,10 +5,7 @@ import com.Knowledgebase.User.dtos.DocumentDTO;
 import com.Knowledgebase.User.dtos.DocumentVersionDTO;
 import com.Knowledgebase.User.dtos.UpdateDocRequest;
 import com.Knowledgebase.User.entities.*;
-import com.Knowledgebase.User.repositories.DocumentRepository;
-import com.Knowledgebase.User.repositories.DocumentUserAccessRepository;
-import com.Knowledgebase.User.repositories.DocumentVersionRepository;
-import com.Knowledgebase.User.repositories.UserRepository;
+import com.Knowledgebase.User.repositories.*;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Transactional
@@ -30,6 +29,8 @@ public class DocumentService {
     private JwtService jwtService;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     public int getUserIdFromToken(String token) {
         return jwtService.extractUserId(token.substring(7));
@@ -48,6 +49,9 @@ public class DocumentService {
         // first version
         saveVersion(doc, currentUser);
 
+        Set<String> mentionedUsernames = extractMentions(doc.getContent());
+        autoShareWithMentionedUsers(doc, mentionedUsernames);
+
         return DocumentDTO.of(doc);
     }
 
@@ -63,6 +67,9 @@ public class DocumentService {
 
         // every save → new version
         saveVersion(doc, currentUser);
+
+        Set<String> mentionedUsernames = extractMentions(doc.getContent());
+        autoShareWithMentionedUsers(doc, mentionedUsernames);
 
         return DocumentDTO.of(doc);
     }
@@ -193,6 +200,39 @@ public class DocumentService {
         document.setUpdatedAt(Instant.now());
 
         saveVersion(document, document.getAuthor()); // Create a new version for the restore
+    }
+
+    private Set<String> extractMentions(String content) {
+        Set<String> usernames = new HashSet<>();
+        Pattern pattern = Pattern.compile("@(\\w+)");
+        Matcher matcher = pattern.matcher(content);
+        while (matcher.find()) {
+            usernames.add(matcher.group(1)); // Extract username without '@'
+        }
+        return usernames;
+    }
+
+    private void autoShareWithMentionedUsers(Document document, Set<String> usernames) {
+        List<User> mentionedUsers = userRepository.findByNameIn(usernames);
+
+        for (User user : mentionedUsers) {
+            boolean alreadyShared = accessRepo.findByDocumentIdAndUserUserId(document.getId(), user.getUserId()).isPresent();
+
+            if (!alreadyShared && user.getUserId() != document.getAuthor().getUserId()) {
+                DocumentUserAccess access = new DocumentUserAccess();
+                access.setDocument(document);
+                access.setUser(user);
+                access.setPermission(Permission.VIEW); // Auto-shared with view access
+                accessRepo.save(access);
+
+            }
+
+            // Create Notification
+            Notification notification = new Notification();
+            notification.setUser(user);
+            notification.setMessage("You were mentioned in document: " + document.getTitle());
+            notificationRepository.save(notification);
+        }
     }
 
 
