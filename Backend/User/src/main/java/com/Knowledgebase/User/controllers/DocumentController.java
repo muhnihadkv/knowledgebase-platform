@@ -1,11 +1,9 @@
 package com.Knowledgebase.User.controllers;
 
-import com.Knowledgebase.User.dtos.CreateDocRequest;
-import com.Knowledgebase.User.dtos.DocumentDTO;
-import com.Knowledgebase.User.dtos.DocumentVersionDTO;
-import com.Knowledgebase.User.dtos.UpdateDocRequest;
+import com.Knowledgebase.User.dtos.*;
 import com.Knowledgebase.User.services.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -71,6 +69,21 @@ public class DocumentController {
         return docService.getPublicDocument(id);
     }
 
+    @PostMapping("/{id}/share")
+    public ResponseEntity<String> shareDocument(@PathVariable Long id,
+                                                @RequestHeader("Authorization") String authHeader,
+                                                @RequestBody ShareRequest request) {
+        docService.shareDocument(id, authHeader, request);
+        return ResponseEntity.ok("User access added successfully");
+    }
+
+    @DeleteMapping("/{id}/share")
+    public ResponseEntity<String> removeAccess(@PathVariable Long id,
+                                               @RequestHeader("Authorization") String authHeader,
+                                               @RequestBody ShareRequest request) {
+        docService.removeUserAccess(id, authHeader, request);
+        return ResponseEntity.ok("User access removed successfully");
+    }
 
 }
 

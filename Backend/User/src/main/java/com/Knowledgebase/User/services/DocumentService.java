@@ -1,9 +1,6 @@
 package com.Knowledgebase.User.services;
 
-import com.Knowledgebase.User.dtos.CreateDocRequest;
-import com.Knowledgebase.User.dtos.DocumentDTO;
-import com.Knowledgebase.User.dtos.DocumentVersionDTO;
-import com.Knowledgebase.User.dtos.UpdateDocRequest;
+import com.Knowledgebase.User.dtos.*;
 import com.Knowledgebase.User.entities.*;
 import com.Knowledgebase.User.repositories.*;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +14,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-@Transactional
 public class DocumentService {
     @Autowired
     private DocumentRepository docRepo;
@@ -36,6 +32,7 @@ public class DocumentService {
         return jwtService.extractUserId(token.substring(7));
     }
     /* ---------- Create ---------- */
+    @Transactional
     public DocumentDTO create(CreateDocRequest req, String authHeader) {
         int userId=getUserIdFromToken(authHeader);
         User currentUser = userRepository.findById(userId).orElse(null);
@@ -63,6 +60,7 @@ public class DocumentService {
     }
 
     /* ---------- Update (Auto‑save) ---------- */
+    @Transactional
     public DocumentDTO update(Long id, UpdateDocRequest req, String authHeader) {
         int userId=getUserIdFromToken(authHeader);
         User currentUser = userRepository.findById(userId).orElse(null);
@@ -105,10 +103,10 @@ public class DocumentService {
     private Document getForEdit(Long id, User u) {
         Document d = docRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Document not found"));
-        boolean allowed = d.getAuthor().equals(u) ||
-                accessRepo.findByDocumentIdAndUserUserId(id, u.getUserId())
-                        .map(a -> a.getPermission() == Permission.EDIT)
-                        .orElse(false);
+        boolean allowed = accessRepo.findByDocumentIdAndUserUserId(id, u.getUserId())
+                .map(a -> a.getPermission() == Permission.EDIT)
+                .orElse(false);
+
         if (!allowed) throw new RuntimeException();
         return d;
     }
@@ -117,9 +115,10 @@ public class DocumentService {
         Document d = docRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Document not found"));
 
-        boolean allowed = d.getVisibility() == Visibility.PUBLIC ||
-                d.getAuthor().getUserId() == userId ||
-                accessRepo.findByDocumentIdAndUserUserId(id, userId).isPresent();
+        boolean allowed = accessRepo.findByDocumentIdAndUserUserId(id, userId)
+                .map(a -> a.getPermission() == Permission.VIEW || a.getPermission() == Permission.EDIT)
+                .orElse(false);
+
 
         if (!allowed) throw new RuntimeException("You do not have view access");
 
@@ -252,5 +251,53 @@ public class DocumentService {
 
         return DocumentDTO.of(document);
     }
+
+    public void shareDocument(Long documentId, String authHeader, ShareRequest request) {
+        int currentUserId = getUserIdFromToken(authHeader);
+
+        Document document = docRepo.findById(documentId)
+                .orElseThrow(() -> new NoSuchElementException("Document not found"));
+
+        if (document.getAuthor().getUserId() != currentUserId) {
+            throw new RuntimeException("Only the author can manage sharing.");
+        }
+
+        User targetUser = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        Optional<DocumentUserAccess> existingAccess = accessRepo.findByDocumentIdAndUserUserId(documentId, targetUser.getUserId());
+        if (existingAccess.isPresent()) {
+            throw new RuntimeException("User already has access.");
+        }
+
+        performShare(document, targetUser, request.getPermission());
+    }
+
+    @Transactional
+    public void performShare(Document document, User user, String permission) {
+        DocumentUserAccess access = new DocumentUserAccess();
+        access.setDocument(document);
+        access.setUser(user);
+        access.setPermission(Permission.valueOf(permission.toUpperCase()));
+        accessRepo.save(access);
+    }
+
+    public void removeUserAccess(Long documentId, String authHeader, ShareRequest request) {
+        int currentUserId = getUserIdFromToken(authHeader);
+
+        Document document = docRepo.findById(documentId)
+                .orElseThrow(() -> new NoSuchElementException("Document not found"));
+
+        if (document.getAuthor().getUserId() != currentUserId) {
+            throw new RuntimeException("Only the author can manage sharing.");
+        }
+
+        DocumentUserAccess access = accessRepo.findByDocumentIdAndUserUserId(documentId, request.getUserId())
+                .orElseThrow(() -> new RuntimeException("User does not have access."));
+
+        accessRepo.delete(access);
+    }
+
+
 
 }
