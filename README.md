@@ -90,6 +90,7 @@ Make sure your MySQL database is running and the schema is created.
 ```bash
 git clone https://github.com/muhnihadkv/knowledgebase-platform.git
 cd knowledgebase-platform
+cd Backend
 ```
 
 2. Build and run using Docker Compose:
