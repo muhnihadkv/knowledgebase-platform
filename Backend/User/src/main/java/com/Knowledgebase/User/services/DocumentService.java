@@ -15,9 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Transactional
@@ -87,19 +85,33 @@ public class DocumentService {
     private boolean canView(Document d, User u) {
         return d.getVisibility() == Visibility.PUBLIC ||
                 d.getAuthor().equals(u) ||
-                accessRepo.findByDocumentIdAndUserId(d.getId(), u.getUserId()).isPresent();
+                accessRepo.findByDocumentIdAndUserUserId(d.getId(), u.getUserId()).isPresent();
     }
 
     private Document getForEdit(Long id, User u) {
         Document d = docRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Document not found"));
         boolean allowed = d.getAuthor().equals(u) ||
-                accessRepo.findByDocumentIdAndUserId(id, u.getUserId())
+                accessRepo.findByDocumentIdAndUserUserId(id, u.getUserId())
                         .map(a -> a.getPermission() == Permission.EDIT)
                         .orElse(false);
         if (!allowed) throw new RuntimeException();
         return d;
     }
+
+    private Document getForView(Long id, int userId) {
+        Document d = docRepo.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Document not found"));
+
+        boolean allowed = d.getVisibility() == Visibility.PUBLIC ||
+                d.getAuthor().getUserId() == userId ||
+                accessRepo.findByDocumentIdAndUserUserId(id, userId).isPresent();
+
+        if (!allowed) throw new RuntimeException("You do not have view access");
+
+        return d;
+    }
+
 
     private void saveVersion(Document doc, User editor) {
         int next = versionRepo.countByDocumentId(doc.getId()) + 1;
@@ -132,5 +144,58 @@ public class DocumentService {
                 .map(DocumentVersionDTO::of)
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public String getVersionContent(Long versionId, String authHeader) {
+
+        int userId = getUserIdFromToken(authHeader);
+
+        DocumentVersion version = versionRepo.findById(versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found"));
+
+        Document document = getForView(version.getDocument().getId(), userId);
+
+        return version.getContentSnapshot();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> compareVersions(Long v1Id, Long v2Id, String authHeader) {
+
+        int userId = getUserIdFromToken(authHeader);
+
+        DocumentVersion v1 = versionRepo.findById(v1Id)
+                .orElseThrow(() -> new RuntimeException("Version 1 not found"));
+
+        DocumentVersion v2 = versionRepo.findById(v2Id)
+                .orElseThrow(() -> new RuntimeException("Version 2 not found"));
+
+        getForView(v1.getDocument().getId(), userId); // Check permission
+
+        Map<String, String> diffResult = new HashMap<>();
+        diffResult.put("version1", v1.getContentSnapshot());
+        diffResult.put("version2", v2.getContentSnapshot());
+
+        return diffResult;
+    }
+
+    @Transactional
+    public void restoreVersion(Long versionId, String authHeader) {
+
+        int userId = getUserIdFromToken(authHeader);
+        User currentUser = userRepository.findById(userId).orElse(null);
+
+        DocumentVersion version = versionRepo.findById(versionId)
+                .orElseThrow(() -> new RuntimeException("Version not found"));
+
+        Document document = getForEdit(version.getDocument().getId(), currentUser);
+
+        document.setContent(version.getContentSnapshot());
+        document.setUpdatedAt(Instant.now());
+
+        saveVersion(document, document.getAuthor()); // Create a new version for the restore
+    }
+
+
+
 
 }

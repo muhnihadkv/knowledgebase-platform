@@ -80,4 +80,8 @@ public class DocumentVersion {
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
+
+    public DocumentVersion() {
+    }
+
 }

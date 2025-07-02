@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.Optional;
 @Repository
 public interface DocumentUserAccessRepository extends JpaRepository<DocumentUserAccess, Long> {
-    Optional<DocumentUserAccess> findByDocumentIdAndUserId(Long docId, int userId);
-    List<DocumentUserAccess> findAllByUserId(int userId);
+    Optional<DocumentUserAccess> findByDocumentIdAndUserUserId(Long docId, int userId);
+    List<DocumentUserAccess> findAllByUserUserId(int userId);
 }
