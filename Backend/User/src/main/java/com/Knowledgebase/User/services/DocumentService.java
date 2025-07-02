@@ -49,6 +49,13 @@ public class DocumentService {
         // first version
         saveVersion(doc, currentUser);
 
+        // Grant the author EDIT access
+        DocumentUserAccess authorAccess = new DocumentUserAccess();
+        authorAccess.setDocument(doc);
+        authorAccess.setUser(currentUser);
+        authorAccess.setPermission(Permission.EDIT);
+        accessRepo.save(authorAccess);
+
         Set<String> mentionedUsernames = extractMentions(doc.getContent());
         autoShareWithMentionedUsers(doc, mentionedUsernames);
 
