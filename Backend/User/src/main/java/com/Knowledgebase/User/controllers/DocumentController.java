@@ -14,7 +14,6 @@ import java.util.Map;
 public class DocumentController {
     @Autowired
     private DocumentService docService;
-    //private AuthFacade auth;      // helper to fetch User from SecurityContext
 
     @PostMapping("/create")
     public DocumentDTO create(@RequestHeader("Authorization") String authHeader,@RequestBody CreateDocRequest req) {
@@ -59,9 +58,10 @@ public class DocumentController {
     }
 
     @PostMapping("/versions/{versionId}/restore")
-    public void restoreVersion(@PathVariable Long versionId,
+    public ResponseEntity<String> restoreVersion(@PathVariable Long versionId,
                                @RequestHeader("Authorization") String authHeader) {
         docService.restoreVersion(versionId, authHeader);
+        return ResponseEntity.ok("document version:"+ versionId + " restored successfully");
     }
 
     @GetMapping("/public/{id}")

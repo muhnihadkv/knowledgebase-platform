@@ -64,7 +64,7 @@ public class DocumentService {
     public DocumentDTO update(Long id, UpdateDocRequest req, String authHeader) {
         int userId=getUserIdFromToken(authHeader);
         User currentUser = userRepository.findById(userId).orElse(null);
-        Document doc = getForEdit(id, currentUser);
+        Document doc = getForEdit(id, userId);
 
         doc.setTitle(req.getTitle());
         doc.setContent(req.getContent());
@@ -85,29 +85,47 @@ public class DocumentService {
         List<Document> results = docRepo.fullTextSearch(q);
 
         int userId = getUserIdFromToken(authHeader);
-        User currentUser = userRepository.findById(userId).orElse(null);
 
         return results.stream()
-                .filter(d -> canView(d, currentUser))
+                .filter(d -> hasViewAccess(d, userId))
                 .map(DocumentDTO::of)
                 .toList();
     }
 
-    /* ---------- Permission helpers ---------- */
-    private boolean canView(Document d, User u) {
-        return d.getVisibility() == Visibility.PUBLIC ||
-                d.getAuthor().equals(u) ||
-                accessRepo.findByDocumentIdAndUserUserId(d.getId(), u.getUserId()).isPresent();
+    private boolean hasViewAccess(Document d, int userId) {
+        // Public documents can be viewed by anyone
+        if (d.getVisibility() == Visibility.PUBLIC) {
+            return true;
+        }
+        // Author can always view
+        if (d.getAuthor().getUserId() == userId) {
+            return true;
+        }
+
+        // Check if the user has explicit VIEW or EDIT permission
+        return accessRepo.findByDocumentIdAndUserUserId(d.getId(), userId)
+                .map(a -> a.getPermission() == Permission.VIEW || a.getPermission() == Permission.EDIT)
+                .orElse(false);
     }
 
-    private Document getForEdit(Long id, User u) {
-        Document d = docRepo.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Document not found"));
-        boolean allowed = accessRepo.findByDocumentIdAndUserUserId(id, u.getUserId())
+    private boolean hasEditAccess(Document d, int userId) {
+        // Author can always edit
+        if (d.getAuthor().getUserId() == userId) {
+            return true;
+        }
+        // Check if the user has explicit EDIT permission
+        return accessRepo.findByDocumentIdAndUserUserId(d.getId(), userId)
                 .map(a -> a.getPermission() == Permission.EDIT)
                 .orElse(false);
+    }
 
-        if (!allowed) throw new RuntimeException();
+    private Document getForEdit(Long id, int userId) {
+        Document d = docRepo.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Document not found"));
+        if (!hasEditAccess(d, userId)) {
+            throw new RuntimeException("You do not have edit access");
+        }
+
         return d;
     }
 
@@ -115,12 +133,9 @@ public class DocumentService {
         Document d = docRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Document not found"));
 
-        boolean allowed = accessRepo.findByDocumentIdAndUserUserId(id, userId)
-                .map(a -> a.getPermission() == Permission.VIEW || a.getPermission() == Permission.EDIT)
-                .orElse(false);
-
-
-        if (!allowed) throw new RuntimeException("You do not have view access");
+        if (!hasViewAccess(d, userId)) {
+            throw new RuntimeException("You do not have view access");
+        }
 
         return d;
     }
@@ -139,7 +154,7 @@ public class DocumentService {
 
         // Fetch all documents
         List<Document> docs = docRepo.findAll().stream()
-                .filter(doc -> canView(doc, currentUser))
+                .filter(doc -> hasViewAccess(doc, userId))
                 .toList();
 
         return docs.stream().map(DocumentDTO::of).toList();
@@ -200,7 +215,7 @@ public class DocumentService {
         DocumentVersion version = versionRepo.findById(versionId)
                 .orElseThrow(() -> new RuntimeException("Version not found"));
 
-        Document document = getForEdit(version.getDocument().getId(), currentUser);
+        Document document = getForEdit(version.getDocument().getId(), userId);
 
         document.setContent(version.getContentSnapshot());
         document.setUpdatedAt(Instant.now());
